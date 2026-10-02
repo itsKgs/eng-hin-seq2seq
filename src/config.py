@@ -29,6 +29,9 @@ class Config:
     max_decode_len: int = 50  # placeholder; derived from data in Step 4
     cell_type: str = "gru"
     data_dir: str = "data"
+    # min_freq: ~half the words occur once; min_freq=2 halves the vocab but turns
+    # only ~5-6% of tokens into <UNK>, and lets the model learn an <UNK> embedding.
+    min_freq: int = 2
 
     def __post_init__(self):
         if self.cell_type not in {"rnn", "gru", "lstm"}:

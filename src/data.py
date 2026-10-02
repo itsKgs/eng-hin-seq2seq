@@ -4,6 +4,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 import zipfile
+from collections import Counter
 
 DATA_URL = "https://www.manythings.org/anki/hin-eng.zip"
 
@@ -103,3 +104,96 @@ def clean_hindi(s):
     s = re.sub(r"\s+", " ", s).strip()
 
     return s
+
+
+class Vocab:
+    """
+    Vocabulary for one language: maps word <-> integer id.
+
+    Build:  vocab = Vocab(train_sentences, min_freq=2)   # from TRAIN data only, once
+    Use:    vocab.encode(...)   -> list of ids for the model
+            vocab.decode(...)   -> readable sentence from model output ids
+            len(vocab)          -> vocabulary size (for Embedding / Linear layers)
+    """
+
+    # Special tokens always come first, in a fixed order:
+    # <PAD>=0, <UNK>=1, <SOS>=2, <EOS>=3
+    SPECIALS = ["<PAD>", "<UNK>", "<SOS>", "<EOS>"]
+
+    def __init__(self, sentences, min_freq):
+        """
+        Runs ONCE, when the Vocab object is created. The vocabulary is built here.
+
+        sentences : list of cleaned strings, e.g. ["i am happy .", ...]
+        min_freq  : words appearing fewer times than this are left out (-> <UNK>)
+        """
+
+        # 1. Count how often each word appears.
+        counts = Counter()
+        for sentence in sentences:
+            counts.update(sentence.split())   # add this sentence's words to the counts
+
+        # 2. Start the id -> word list with the special tokens.
+        #    .copy() matters: without it, idx2word and SPECIALS would be the SAME
+        #    list, and appending words would modify the class-level SPECIALS.
+        self.idx2word = self.SPECIALS.copy()
+
+        # 3. Sort words into a FIXED order, so every run gives the same ids:
+        #    higher count first (-counts[word]); ties broken alphabetically (word).
+        words = sorted(counts.keys(), key=lambda word: (-counts[word], word))
+
+        # 4. Keep only words that appear at least min_freq times.
+        #    Rarer words are not added, so encode() will map them to <UNK>.
+        for word in words:
+            if counts[word] >= min_freq:
+                self.idx2word.append(word)
+
+        # 5. Build the reverse mapping: word -> id.
+        #    enumerate gives (index, word); the index IS the word's id.
+        self.word2idx = {}
+        for i, word in enumerate(self.idx2word):
+            self.word2idx[word] = i
+
+        # 6. Shortcuts for the special token ids (looked up, never hard-coded).
+        self.pad_idx = self.word2idx["<PAD>"]
+        self.unk_idx = self.word2idx["<UNK>"]
+        self.sos_idx = self.word2idx["<SOS>"]
+        self.eos_idx = self.word2idx["<EOS>"]
+
+    def encode(self, sentence, add_sos_eos):
+        """
+        Cleaned sentence -> list of ids.
+
+        add_sos_eos=True  for the target (Hindi / decoder):  [<SOS>, ..., <EOS>]
+        add_sos_eos=False for the source (English / encoder): no special tokens
+        """
+        ids = []
+        for word in sentence.split():
+            if word in self.word2idx:
+                ids.append(self.word2idx[word])   # known word -> its id
+            else:
+                ids.append(self.unk_idx)          # unknown word -> <UNK>
+
+        if add_sos_eos:
+            ids.insert(0, self.sos_idx)   # <SOS> at the start
+            ids.append(self.eos_idx)      # <EOS> at the end
+        return ids
+
+    def decode(self, ids):
+        """
+        List of ids -> readable sentence.
+        Stops at the first <EOS>; skips <SOS> and <PAD>.
+        """
+        words = []
+        for idx in ids:                   # 'idx', not 'id': avoid shadowing the built-in id()
+            word = self.idx2word[idx]
+            if word == "<EOS>":
+                break                     # everything after <EOS> is meaningless
+            if word == "<SOS>" or word == "<PAD>":
+                continue                  # skip, but keep reading
+            words.append(word)
+        return " ".join(words)
+
+    def __len__(self):
+        """Vocabulary size, including the 4 special tokens. Enables len(vocab)."""
+        return len(self.idx2word)

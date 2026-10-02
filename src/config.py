@@ -28,6 +28,7 @@ class Config:
     clip_max_norm: float = 1.0
     max_decode_len: int = 50  # placeholder; derived from data in Step 4
     cell_type: str = "gru"
+    data_dir: str = "data"
 
     def __post_init__(self):
         if self.cell_type not in {"rnn", "gru", "lstm"}:

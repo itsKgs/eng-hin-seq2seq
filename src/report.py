@@ -15,7 +15,8 @@ matplotlib.use("Agg")                 # no display needed (Colab / scripts)
 import matplotlib.pyplot as plt
 
 from src.config import Config
-from src.data import clean_english, clean_hindi, download_dataset, load_pairs
+from src.data import clean_english, clean_hindi
+from src.iitb import load_iitb_pairs
 from src.dataset import split_pairs
 from src.evaluate import bleu, evaluate_model
 from src.train import CHECKPOINT_DIR
@@ -262,8 +263,9 @@ def write_report(results, test_pairs, refs, histories):
     lines = [
         "# Results: English → Hindi Seq2Seq (RNN vs GRU vs LSTM)",
         "",
-        "Basic Encoder–Decoder without attention, trained on the Tatoeba / ManyThings "
-        "English–Hindi pairs (80/10/10 split, seed 42). Same data, vocabulary, "
+        "Basic Encoder–Decoder without attention, trained on a filtered subset of the "
+        "IIT Bombay English–Hindi corpus (pairs with 3-15 tokens per side, 100k pairs, "
+        "80/10/10 split, seed 42). Same data, vocabulary, "
         "hyperparameters and seed for all three models; only the recurrent cell changes.",
         f"Test set: {n_test} sentence pairs. Decoding: greedy. BLEU: sacrebleu corpus BLEU "
         "on our word-level tokenization, single reference.",
@@ -336,7 +338,7 @@ def main():
     cfg = Config()
 
     # Same test split as training / evaluation
-    pairs = load_pairs(download_dataset(cfg.data_dir))
+    pairs = load_iitb_pairs(cfg.data_dir, cfg.iitb_max_len, cfg.iitb_max_pairs, cfg.seed)
     _, _, test_pairs = split_pairs(pairs, seed=cfg.seed)
     refs = [clean_hindi(hi) for _, hi in test_pairs]
     src_lens = [len(clean_english(en).split()) for en, _ in test_pairs]

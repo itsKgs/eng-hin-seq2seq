@@ -13,7 +13,8 @@ import torch
 import torch.nn as nn
 
 from src.config import Config
-from src.data import clean_english, clean_hindi, download_dataset, load_pairs
+from src.data import clean_english, clean_hindi
+from src.iitb import load_iitb_pairs
 from src.dataset import TranslationDataset, collate_fn, split_pairs
 from src.inference import load_model, translate_batch
 from src.train import CHECKPOINT_DIR, run_epoch
@@ -97,7 +98,7 @@ def main():
     cfg = Config()
 
     # Same split as training (same seed, same function)
-    pairs = load_pairs(download_dataset(cfg.data_dir))
+    pairs = load_iitb_pairs(cfg.data_dir, cfg.iitb_max_len, cfg.iitb_max_pairs, cfg.seed)
     _, _, test_pairs = split_pairs(pairs, seed=cfg.seed)
 
     results = [r for r in (evaluate_model(c, test_pairs, device) for c in args.cells) if r]

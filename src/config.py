@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class Config:
     seed: int = 42
 
-    batch_size: int = 32
+    batch_size: int = 128   # 80k training pairs -> bigger batches
 
     # embedding_dim: vocabularies here are only a few thousand words
     # (V_en ~2.5k, V_hi ~3k), far smaller than the 100k+ vocabularies that
@@ -23,7 +23,7 @@ class Config:
 
     num_layers: int = 1
     learning_rate: float = 1e-3
-    num_epochs: int = 20
+    num_epochs: int = 15
     teacher_forcing_ratio: float = 0.5
     clip_max_norm: float = 1.0
     max_decode_len: int = 50  # placeholder; derived from data in Step 4
@@ -31,7 +31,12 @@ class Config:
     data_dir: str = "data"
     # min_freq: ~half the words occur once; min_freq=2 halves the vocab but turns
     # only ~5-6% of tokens into <UNK>, and lets the model learn an <UNK> embedding.
-    min_freq: int = 2
+    min_freq: int = 3       # more data -> drop words seen < 3 times (noise, typos)
+
+    # IITB English-Hindi corpus: keep pairs with <= iitb_max_len tokens per side,
+    # then a random subset of iitb_max_pairs (split 80/10/10 into train/val/test)
+    iitb_max_len: int = 15
+    iitb_max_pairs: int = 100_000
 
     def __post_init__(self):
         if self.cell_type not in {"rnn", "gru", "lstm"}:

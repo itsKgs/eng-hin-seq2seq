@@ -10,7 +10,8 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
 
-from src.data import Vocab, clean_english, clean_hindi, download_dataset, load_pairs
+from src.data import Vocab, clean_english, clean_hindi
+from src.iitb import load_iitb_pairs
 
 
 def split_pairs(pairs, seed, train_frac=0.8, val_frac=0.1):
@@ -103,7 +104,7 @@ def build_data(cfg):
     Returns a dict with the three loaders and the two vocabularies.
     """
     # 1. Load raw pairs and split them (split BEFORE building the vocab)
-    pairs = load_pairs(download_dataset(cfg.data_dir))
+    pairs = load_iitb_pairs(cfg.data_dir, cfg.iitb_max_len, cfg.iitb_max_pairs, cfg.seed)
     train, val, test = split_pairs(pairs, seed=cfg.seed)
 
     # 2. Vocabularies from the TRAIN split only (no leakage from val/test)

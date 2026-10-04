@@ -117,6 +117,7 @@ def main():
     hist_path = os.path.join(CHECKPOINT_DIR, f"{run_name}_history.json")
 
     best_val = math.inf
+    epochs_without_improvement = 0
     history = []
     start = time.time()
 
@@ -137,6 +138,7 @@ def main():
         improved = val_loss < best_val
         if improved:
             best_val = val_loss
+            epochs_without_improvement = 0
             # Save weights + everything needed to rebuild the model later
             torch.save({
                 "model_state": model.state_dict(),
@@ -152,6 +154,14 @@ def main():
                         "val_loss": val_loss, "seconds": secs})
         print(f"epoch {epoch:2d} | train {train_loss:.3f} | val {val_loss:.3f} "
               f"| {secs:5.1f}s {'| saved' if improved else ''}")
+
+        # Early stopping: the best checkpoint is already saved, so further
+        # epochs that only overfit are wasted GPU time
+        if not improved:
+            epochs_without_improvement += 1
+            if epochs_without_improvement >= cfg.early_stop_patience:
+                print(f"Early stopping: no val improvement for {cfg.early_stop_patience} epochs")
+                break
 
     total_time = time.time() - start
     with open(hist_path, "w") as f:

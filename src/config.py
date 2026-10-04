@@ -26,7 +26,8 @@ class Config:
     num_epochs: int = 15
     teacher_forcing_ratio: float = 0.5
     clip_max_norm: float = 1.0
-    max_decode_len: int = 50  # placeholder; derived from data in Step 4
+    max_decode_len: int = 20  # IITB pairs have <= 15 tokens (+ <EOS>)
+    early_stop_patience: int = 3  # stop after this many epochs without val improvement
     cell_type: str = "gru"
     data_dir: str = "data"
     # min_freq: ~half the words occur once; min_freq=2 halves the vocab but turns

@@ -78,6 +78,8 @@ def clean_english(s):
     s = s.replace("\u2019", "'")
     s = s.replace("\u2018", "'")            # ← SUDHAAR: ulta apostrophe bhi
 
+    s = s.replace("\u201c", '"').replace("\u201d", '"')   # curly double quotes -> "
+
     # 3. lowercase
     s = s.lower()
 
@@ -96,6 +98,12 @@ def clean_hindi(s):
 
     # 2. | ko Hindi danda mein badlo
     s = s.replace("|", "।")
+
+    # IITB fixes: curly double quotes -> ", stray curly apostrophes removed
+    # (Hindi does not use them), sentence-final "." -> "।" (one full stop token)
+    s = s.replace("\u201c", '"').replace("\u201d", '"')
+    s = s.replace("\u2018", "").replace("\u2019", "")
+    s = re.sub(r"\.\s*$", "।", s.strip())
 
     # 3. punctuation ke dono taraf space
     s = re.sub(r'([।?!,".()])', r" \1 ", s)  # ← SUDHAAR: \- hataya (एक-दूसरे ek word)
